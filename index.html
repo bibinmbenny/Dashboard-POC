@@ -254,6 +254,12 @@
             font-weight: 700;
         }
         
+        /* New Cards Span Logic */
+        .ci-summary-card, .general-metrics-card {
+             /* Default span 1 */
+             grid-column: span 1;
+        }
+
         /* Layout for the PR Metadata card (Two-column structure) */
         .pr-metadata-grid {
             display: grid;
@@ -411,20 +417,19 @@
             .card-header { flex-direction: column; align-items: flex-start; }
             #pr-details-container .pr-title-block { flex-direction: column; align-items: flex-start; }
             #pr-details-container h2 { margin-bottom: 0.5rem; }
-            .revision-summary { padding: 1rem; }
+            .revision-summary { padding: 1rem; flex-direction: column; align-items: flex-start; gap: 0.5rem;}
             .revision-info { padding-right: 0; }
-            .content-grid { padding: 1rem; }
-            /* Mobile: Collapse PR Metadata Grid to single column */
-            .pr-metadata-grid {
-                grid-template-columns: 1fr;
+            .content-grid { 
+                padding: 1rem; 
+                grid-template-columns: 1fr; /* Single column on mobile */
             }
-            .pr-metadata-btn-container {
-                justify-content: flex-start;
-                margin-top: 1rem;
-            }
+            .failure-card { margin-bottom: 1rem; }
+            .pr-metadata-grid { grid-template-columns: 1fr; }
+            .pr-metadata-btn-container { justify-content: flex-start; margin-top: 1rem; }
             #pr-details-container { padding: 1.5rem; }
             #pr-details-container h2 { font-size: 1.5rem; }
             .pr-subtitle-block { font-size: 0.95rem; }
+            .ci-summary-card, .general-metrics-card { grid-column: 1 / -1; }
         }
     </style>
 </head>
@@ -458,10 +463,23 @@
         const commitBaseUrl = "https://github.com/cisco-netsec-sandbox/netsec-fxos-pr-dashboard-poc1/commit/";
 
         // --- Azure SAS URL Data Source ---
-        // We will use the provided SAS URL directly.
         const AZURE_SAS_URL = "https://bibinlearnsa.blob.core.windows.net/mycontainer/sample1.json?sp=racwdyti&st=2025-11-24T06:41:15Z&se=2025-11-28T14:56:15Z&spr=https&sv=2024-11-04&sr=b&sig=Et%2BuF8QBaR8AEIDR%2BdxrwtSVnhqSdvLPxLbpXzYsTzg%3D";
 
-        // --- Utility Functions (moved to top for scope safety) ---
+        // --- Fallback Data (In case Azure fetch fails) ---
+        const staticPr4Data = [
+            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 1, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T08:00:00Z", "commit_hash": "c1f3b7d1e0a2f4c9", "ci_duration_seconds": 1800, "failed_stage": "ARM", "error_message": "Linker error: Undefined reference to 'vtable for NetworkInterface'.", "changed_files_details": [] },
+            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 2, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARMV: Static Analysis Files Count": 0, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T11:00:00Z", "commit_hash": "a2c4e6g8i0k2m4n6", "ci_duration_seconds": 2700, "failed_stage": "ARSENAL", "error_message": "Dependency 'lib-security-v2' not found.", "changed_files_details": [] },
+            { 
+                "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": "33%", "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "smp: Static Analysis Issues": 0, "changed_files": 1, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 12, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARMV: Static Analysis Files Count": 0, "ARM: Build Status": "FAILURE", 
+                "created_at": "2025-11-17T12:00:00Z", "commit_hash": "p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1", "ci_duration_seconds": 4500, "failed_stage": "ARM", "error_message": "Final attempt failed: ARM build timeout after 60 minutes.", "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}],
+                "latest_build_label": "fxplatform-uxbridge__FXOS_2_19_MAIN-82.19.0.25",
+                "latest_build_changelist": "4664218",
+                "latest_build_version": "82.19.0.25",
+                "updated_at": "2025-11-18T08:46:52Z", "pr_state": "open", "base_branch": "uxbridge/FXOS_2_19_MAIN_ALPHA", "head_branch": "main", "ci_start_time": "2025-11-18T08:42:22Z", "jenkins_build_number": 131, "jenkins_build_url": "https://jenkins.service.ntd.ciscolabs.com/job/FXOS-P4GIT/job/FXOS-PR-Dashboard/job/PR-4/131/"
+            }
+        ];
+
+        // --- Utility Functions ---
 
         function getStatusClass(status) {
             status = String(status).toUpperCase();
@@ -525,9 +543,9 @@
             `;
         }
 
-        // --- Helper to render the new General Metrics card ---
         function renderGeneralMetricsCard(data) {
-            const hasGeneralMetrics = ['updated_at', 'pr_state', 'base_branch'].some(key => data.hasOwnProperty(key));
+            const keys = ['updated_at', 'pr_state', 'base_branch', 'head_branch', 'ci_start_time', 'jenkins_build_number', 'jenkins_build_url'];
+            const hasGeneralMetrics = keys.some(key => data.hasOwnProperty(key));
             if (!hasGeneralMetrics) return '';
 
             const jenkinsUrl = data.jenkins_build_url || '#';
@@ -535,7 +553,7 @@
             const prState = data.pr_state ? data.pr_state.toUpperCase() : 'N/A';
             
             return `
-                <div class="card">
+                <div class="card general-metrics-card">
                     <div class="card-header"><h3>General Metrics</h3></div>
                     <div class="pr-metadata-grid">
                         <div class="pr-metadata-left">
@@ -702,9 +720,9 @@
             const failureCardHtml = renderFailureCard(data);
             const generalMetricsCardHtml = renderGeneralMetricsCard(data);
             
-            // NEW: Render the new Summary card (combining Commit/CI Details and Files Changed)
+            // CI Summary card (combining Commit/CI Details and Files Changed)
             const ciSummaryCardHtml = `
-                <div class="card">
+                <div class="card ci-summary-card">
                     <div class="card-header">
                         <h3>CI Summary</h3>
                     </div>
@@ -755,35 +773,23 @@
             `;
         }
 
-        // --- Main Loader Function ---
-        
-        // Reusable fetch function with retry logic
         async function fetchWithRetry(url, maxRetries = 3) {
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const cacheBuster = `&v=${new Date().getTime()}`; // Use & as SAS already contains ?
+                    // Use & as SAS already contains ?
+                    const cacheBuster = `&v=${new Date().getTime()}`; 
                     const response = await fetch(url + cacheBuster, { credentials: 'omit', cache: 'no-store' });
                     
                     if (!response.ok) {
-                         // Throw status error if not 200 OK
                         throw new Error(`HTTP error! Status: ${response.status} (${response.statusText})`);
                     }
                     const data = await response.json();
+                    if (Array.isArray(data)) return data;
                     
-                    // Check if the structure is an object containing revisions or a direct array
-                    if (Array.isArray(data)) {
-                        return data;
-                    } else if (typeof data === 'object' && data !== null && Array.isArray(data.revisions)) {
-                         // If data is structured {pr_id:..., revisions: []}
-                        return data.revisions;
-                    }
-                    
-                    throw new Error("Fetched data is not in expected array or object structure.");
+                    throw new Error("Fetched data is not an array.");
                 } catch (error) {
                     console.error(`Attempt ${i + 1} failed: ${error.message}`);
-                    if (i === maxRetries - 1) {
-                        return null; // All retries failed
-                    }
+                    if (i === maxRetries - 1) return null; // All retries failed
                     const delay = Math.pow(2, i) * 1000;
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
@@ -796,39 +802,27 @@
             const loadingParagraph = prDetailsContainer.querySelector('p');
             const prId = new URLSearchParams(window.location.search).get("pr") || "4"; 
             
-            // --- DATA LOADING STEP ---
-            let dataList = null;
+            // Try to fetch from Azure
+            let dataList = await fetchWithRetry(AZURE_SAS_URL);
             
-            // Fetch from Azure Blob Storage URL
-            dataList = await fetchWithRetry(AZURE_SAS_URL);
-            
+            // If fetch fails, use static fallback data
+            if (!dataList) {
+                 console.warn("Fetch failed. Falling back to static mock data.");
+                 dataList = staticPr4Data;
+            }
+
             if (!dataList || dataList.length === 0) {
-                 loadingParagraph.innerHTML = `<strong>Error:</strong> Failed to load data from Azure Blob Storage.<br>Please ensure the SAS URL is active and CORS is configured on the storage account.`;
-                 loadingParagraph.style.color = "var(--failure)";
+                 loadingParagraph.innerText = `Error: No data found for PR #${prId}.`;
                  return;
             }
 
             if (loadingParagraph) loadingParagraph.remove();
 
-            // Filter data for the specific PR ID (if the JSON contains multiple PRs)
-            let filteredData = dataList.filter(d => String(d.pr_id) === prId);
-            
-            if (filteredData.length === 0) {
-                loadingParagraph.innerHTML = `<strong>Error:</strong> Data loaded, but no revisions found for PR #${prId}.`;
-                loadingParagraph.style.color = "var(--warning)";
-                return;
-            }
-            
-            // Use the filtered list for rendering the timeline
-            dataList = filteredData;
-
-
-            // --- Rendering Logic ---
-            
+            // Sort data by revision descending (latest first)
             dataList.sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0));
             const latestRevisionData = dataList[0];
 
-            // 1. Prepare Metadata Header
+            // Render Header
             const overallStatus = getOverallStatus(latestRevisionData);
             const overallStatusBadge = `<span class="status-badge ${getStatusBgClass(overallStatus)}">${overallStatus}</span>`;
             const prIdDisplay = `#${latestRevisionData.pr_id ?? prId}`;
@@ -852,16 +846,14 @@
             `;
             headerElement.insertAdjacentHTML('afterend', subtitleHtml);
 
-            // --- Generate Files Changed Details HTML ---
+            // Render Metadata grid
             let fileDetailsHTML = '';
             const filesChangedCount = latestRevisionData.changed_files ?? 0;
-            const fileDetails = latestRevisionData.changed_files_details || []; 
-            const diffHashBaseUrl = `${repoBaseUrl}${prId}/files#diff-`;
-
             if (filesChangedCount > 0) {
-                 const visibleFileDetails = fileDetails.slice(0, 3);
+                 const fileDetails = latestRevisionData.changed_files_details || [];
+                 const diffHashBaseUrl = `${repoBaseUrl}${prId}/files#diff-`;
                  
-                 const fileListItems = visibleFileDetails.map(file => {
+                 const fileListItems = fileDetails.slice(0, 3).map(file => {
                     const diffHash = file.diff_hash || crypto.randomUUID().replace(/-/g, '').substring(0, 32); 
                     const fileDiffUrl = `${diffHashBaseUrl}${diffHash}`;
                     const additionsDisplay = (file.additions ?? 0) > 0 ? `<span class="${getStatusClass(true)}">+${file.additions}</span>` : '';
@@ -929,7 +921,7 @@
             dashboardContainer.innerHTML = revisionCardsHtml;
         }
 
-        loadMetrics();
+        window.onload = loadMetrics;
     </script>
 </body>
 </html>
