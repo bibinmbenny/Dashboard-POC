@@ -411,15 +411,17 @@
             .card-header { flex-direction: column; align-items: flex-start; }
             #pr-details-container .pr-title-block { flex-direction: column; align-items: flex-start; }
             #pr-details-container h2 { margin-bottom: 0.5rem; }
-            .revision-summary { padding: 1rem; flex-direction: column; align-items: flex-start; gap: 0.5rem;}
+            .revision-summary { padding: 1rem; }
             .revision-info { padding-right: 0; }
-            .content-grid { 
-                padding: 1rem; 
-                grid-template-columns: 1fr; /* Single column on mobile */
+            .content-grid { padding: 1rem; }
+            /* Mobile: Collapse PR Metadata Grid to single column */
+            .pr-metadata-grid {
+                grid-template-columns: 1fr;
             }
-            .failure-card { margin-bottom: 1rem; }
-            .pr-metadata-grid { grid-template-columns: 1fr; }
-            .pr-metadata-btn-container { justify-content: flex-start; margin-top: 1rem; }
+            .pr-metadata-btn-container {
+                justify-content: flex-start;
+                margin-top: 1rem;
+            }
             #pr-details-container { padding: 1.5rem; }
             #pr-details-container h2 { font-size: 1.5rem; }
             .pr-subtitle-block { font-size: 0.95rem; }
@@ -455,30 +457,11 @@
         const repoBaseUrl = "https://github.com/cisco-netsec-sandbox/netsec-fxos-pr-dashboard-poc1/pull/";
         const commitBaseUrl = "https://github.com/cisco-netsec-sandbox/netsec-fxos-pr-dashboard-poc1/commit/";
 
-        // --- Static Mock Data (Consolidated from dashboard_4.json) ---
-        // This array contains the full dataset for PR #4, serving as the static mock source.
-        const staticPr4Data = [
-            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 1, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T08:00:00Z", "commit_hash": "c1f3b7d1e0a2f4c9", "ci_duration_seconds": 1800, "failed_stage": "ARM", "error_message": "Linker error: Undefined reference to 'vtable for NetworkInterface'.", "changed_files_details": [] },
-            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 2, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T11:00:00Z", "commit_hash": "a2c4e6g8i0k2m4n6", "ci_duration_seconds": 2700, "failed_stage": "ARSENAL", "error_message": "Dependency 'lib-security-v2' not found.", "changed_files_details": [] },
-            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 3, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T14:00:00Z", "commit_hash": "b3d5f7h9j1l3n5p7", "ci_duration_seconds": 2200, "failed_stage": "ARM", "error_message": "Compiler error: Undefined reference to 'legacy_function_v2'.", "changed_files_details": [] },
-            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 4, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T17:00:00Z", "commit_hash": "c4e6g8i0k2m4n6p8", "ci_duration_seconds": 1900, "failed_stage": "ARSENAL", "error_message": "Package dependency resolution failed.", "changed_files_details": [] },
-            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 5, "created_at": "2025-11-16T15:00:00Z", "commit_hash": "i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4", "ci_duration_seconds": 2000, "Unit Tests: Build Status": "IN PROGRESS", "smp: Build Status": "PENDING", "ARMV: Build Status": "PENDING", "ARSENAL: Build Status": "PENDING", "ARM: Build Status": "PENDING", "failed_stage": null, "error_message": null, "changed_files_details": [] },
-            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 6, "created_at": "2025-11-16T18:00:00Z", "commit_hash": "j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5", "ci_duration_seconds": 2300, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 30, "smp: Build Status": "IN PROGRESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "PENDING", "ARM: Build Status": "PENDING", "failed_stage": null, "error_message": null, "changed_files_details": [] },
-            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 7, "created_at": "2025-11-16T21:00:00Z", "commit_hash": "k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6", "ci_duration_seconds": 2500, "Unit Tests: Build Status": "SUCCESS", "smp: Build Status": "SUCCESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "IN PROGRESS", "ARM: Build Status": "PENDING", "failed_stage": null, "error_message": null, "changed_files_details": [] },
-            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 8, "created_at": "2025-11-17T00:00:00Z", "commit_hash": "l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7", "ci_duration_seconds": 2800, "Unit Tests: Build Status": "SUCCESS", "smp: Build Status": "SUCCESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "SUCCESS", "ARM: Build Status": "IN PROGRESS", "failed_stage": null, "error_message": null, "changed_files_details": [] },
-            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 9, "created_at": "2025-11-17T03:00:00Z", "commit_hash": "m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8", "ci_duration_seconds": 3100, "Unit Tests: Build Status": "SUCCESS", "smp: Build Status": "SUCCESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "SUCCESS", "ARM: Build Status": "SUCCESS", "failed_stage": null, "error_message": null, "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}] },
-            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 10, "created_at": "2025-11-17T06:00:00Z", "commit_hash": "n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9", "ci_duration_seconds": 3600, "Unit Tests: Build Status": "SUCCESS", "smp: Build Status": "SUCCESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "SUCCESS", "ARM: Build Status": "FAILURE", "failed_stage": "ARM", "error_message": "Compiler error: Undefined reference to 'legacy_function_v2'. Linker stage failed.", "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}] },
-            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": "33%", "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 11, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T09:00:00Z", "commit_hash": "o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0", "ci_duration_seconds": 4200, "failed_stage": "ARSENAL", "error_message": "Package dependency resolution failed due to incompatible library versions. Check ARSENAL log for details.", "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}] },
-            { 
-                "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": "33%", "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "smp: Static Analysis Issues": 0, "changed_files": 1, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 12, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", 
-                "created_at": "2025-11-17T12:00:00Z", "commit_hash": "p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1", "ci_duration_seconds": 4500, "failed_stage": "ARM", "error_message": "Final attempt failed: ARM build timeout after 60 minutes.", "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}],
-                "latest_build_label": "fxplatform-uxbridge__FXOS_2_19_MAIN-82.19.0.25",
-                "latest_build_changelist": "4664218",
-                "latest_build_version": "82.19.0.25",
-                "updated_at": "2025-11-18T08:46:52Z", "pr_state": "open", "base_branch": "uxbridge/FXOS_2_19_MAIN_ALPHA", "head_branch": "main", "ci_start_time": "2025-11-18T08:42:22Z", "jenkins_build_number": 131, "jenkins_build_url": "https://jenkins.service.ntd.ciscolabs.com/job/FXOS-P4GIT/job/FXOS-PR-Dashboard/job/PR-4/131/"
-            }
-        ];
-        // --- Dashboard Utility Functions ---
+        // --- Azure SAS URL Data Source ---
+        // We will use the provided SAS URL directly.
+        const AZURE_SAS_URL = "https://bibinlearnsa.blob.core.windows.net/mycontainer/sample1.json?sp=r&st=2025-11-24T06:41:15Z&se=2025-11-28T14:56:15Z&spr=https&sv=2024-11-04&sr=b&sig=koKkkY93vv4rPbK%2BCxF8Ej0RCHOIvUJo3rIthCxbz8U%3D";
+
+        // --- Utility Functions (moved to top for scope safety) ---
 
         function getStatusClass(status) {
             status = String(status).toUpperCase();
@@ -709,33 +692,6 @@
             `;
         }
 
-        function renderMetadataCard(data) {
-            const shortHash = (data.commit_hash ?? 'N/A').substring(0, 8);
-            const prLink = data.commit_hash ? `${repoBaseUrl}${data.pr_id}/commits/${data.commit_hash}` : '#';
-            const durationDisplay = calculateDuration(data.ci_duration_seconds);
-            const mergedStatusText = data.merged === undefined ? "N/A" : (data.merged ? "TRUE" : "FALSE");
-            
-            return `
-                <div class="card">
-                    <div class="card-header"><h3>Commit & CI Details</h3></div>
-                    <div class="pr-metadata-grid">
-                        <div class="pr-metadata-left">
-                            <p><strong>Commit Hash:</strong> <a href="${prLink}" target="_blank">${shortHash}</a></p>
-                            <p><strong>Run Initiated:</strong> ${formatCiRunTime(data.created_at)}</p>
-                            <p><strong>CI Duration:</strong> ${durationDisplay}</p>
-                        </div>
-                        <div class="pr-metadata-right">
-                            <p><strong>Overall Build:</strong> <span class="${getStatusClass(getOverallStatus(data))}">${getOverallStatus(data)}</span></p>
-                            <p><strong>Merged:</strong> <span class="status-merged-${String(data.merged).toLowerCase()}">${mergedStatusText}</span></p>
-                            <div class="pr-metadata-btn-container">
-                                <a href="${prLink}" target="_blank" class="btn">View CI Log & Commit</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
         function createRevisionCard(data, isOpen = '') {
             const overallStatus = getOverallStatus(data);
             const summaryStatusBadge = `<span class="revision-status-display ${getStatusBgClass(overallStatus)}">${overallStatus}</span>`;
@@ -748,7 +704,7 @@
             
             // NEW: Render the new Summary card (combining Commit/CI Details and Files Changed)
             const ciSummaryCardHtml = `
-                <div class="card ci-summary-card">
+                <div class="card">
                     <div class="card-header">
                         <h3>CI Summary</h3>
                     </div>
@@ -799,25 +755,80 @@
             `;
         }
 
+        // --- Main Loader Function ---
+        
+        // Reusable fetch function with retry logic
+        async function fetchWithRetry(url, maxRetries = 3) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const cacheBuster = `&v=${new Date().getTime()}`; // Use & as SAS already contains ?
+                    const response = await fetch(url + cacheBuster, { credentials: 'omit', cache: 'no-store' });
+                    
+                    if (!response.ok) {
+                         // Throw status error if not 200 OK
+                        throw new Error(`HTTP error! Status: ${response.status} (${response.statusText})`);
+                    }
+                    const data = await response.json();
+                    
+                    // Check if the structure is an object containing revisions or a direct array
+                    if (Array.isArray(data)) {
+                        return data;
+                    } else if (typeof data === 'object' && data !== null && Array.isArray(data.revisions)) {
+                         // If data is structured {pr_id:..., revisions: []}
+                        return data.revisions;
+                    }
+                    
+                    throw new Error("Fetched data is not in expected array or object structure.");
+                } catch (error) {
+                    console.error(`Attempt ${i + 1} failed: ${error.message}`);
+                    if (i === maxRetries - 1) {
+                        return null; // All retries failed
+                    }
+                    const delay = Math.pow(2, i) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
         async function loadMetrics() {
             const dashboardContainer = document.getElementById("dashboard");
             const prDetailsContainer = document.getElementById("pr-details-container");
             const loadingParagraph = prDetailsContainer.querySelector('p');
             const prId = new URLSearchParams(window.location.search).get("pr") || "4"; 
-
-            // Use the static data directly, avoiding the failing fetch call
-            let dataList = staticPr4Data;
+            
+            // --- DATA LOADING STEP ---
+            let dataList = null;
+            
+            // Fetch from Azure Blob Storage URL
+            dataList = await fetchWithRetry(AZURE_SAS_URL);
             
             if (!dataList || dataList.length === 0) {
-                 loadingParagraph.innerText = `Error: No data found for PR #${prId}.`;
+                 loadingParagraph.innerHTML = `<strong>Error:</strong> Failed to load data from Azure Blob Storage.<br>Please ensure the SAS URL is active and CORS is configured on the storage account.`;
+                 loadingParagraph.style.color = "var(--failure)";
                  return;
             }
 
             if (loadingParagraph) loadingParagraph.remove();
 
+            // Filter data for the specific PR ID (if the JSON contains multiple PRs)
+            let filteredData = dataList.filter(d => String(d.pr_id) === prId);
+            
+            if (filteredData.length === 0) {
+                loadingParagraph.innerHTML = `<strong>Error:</strong> Data loaded, but no revisions found for PR #${prId}.`;
+                loadingParagraph.style.color = "var(--warning)";
+                return;
+            }
+            
+            // Use the filtered list for rendering the timeline
+            dataList = filteredData;
+
+
+            // --- Rendering Logic ---
+            
             dataList.sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0));
             const latestRevisionData = dataList[0];
 
+            // 1. Prepare Metadata Header
             const overallStatus = getOverallStatus(latestRevisionData);
             const overallStatusBadge = `<span class="status-badge ${getStatusBgClass(overallStatus)}">${overallStatus}</span>`;
             const prIdDisplay = `#${latestRevisionData.pr_id ?? prId}`;
@@ -841,13 +852,16 @@
             `;
             headerElement.insertAdjacentHTML('afterend', subtitleHtml);
 
+            // --- Generate Files Changed Details HTML ---
             let fileDetailsHTML = '';
             const filesChangedCount = latestRevisionData.changed_files ?? 0;
+            const fileDetails = latestRevisionData.changed_files_details || []; 
+            const diffHashBaseUrl = `${repoBaseUrl}${prId}/files#diff-`;
+
             if (filesChangedCount > 0) {
-                 const fileDetails = latestRevisionData.changed_files_details || [];
-                 const diffHashBaseUrl = `${repoBaseUrl}${prId}/files#diff-`;
+                 const visibleFileDetails = fileDetails.slice(0, 3);
                  
-                 const fileListItems = fileDetails.slice(0, 3).map(file => {
+                 const fileListItems = visibleFileDetails.map(file => {
                     const diffHash = file.diff_hash || crypto.randomUUID().replace(/-/g, '').substring(0, 32); 
                     const fileDiffUrl = `${diffHashBaseUrl}${diffHash}`;
                     const additionsDisplay = (file.additions ?? 0) > 0 ? `<span class="${getStatusClass(true)}">+${file.additions}</span>` : '';
@@ -906,6 +920,7 @@
             
             prDetailsContainer.insertAdjacentHTML('beforeend', metadataHtml);
 
+            // 3. Render Revision Timeline
             const revisionCardsHtml = dataList.map((data, index) => {
                 const isOpen = index === 0 ? 'open' : '';
                 return createRevisionCard(data, isOpen);
