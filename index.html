@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FXOS Pre-Commit Dashboard</title>
+    <style>
+        /* Cisco-inspired Dark Theme Variables */
+        :root {
+            --cisco-blue: #00BCEB; /* Bright blue for accents/links */
+            --cisco-dark-blue: #005073; /* Darker blue for secondary accents */
+            --bg: #0f172a; /* Slate-900 (Deep Dark Background) */
+            --card: #1e293b; /* Slate-800 (Card Background) */
+            --text: #f1f5f9; /* Slate-100 (Primary Text) */
+            --success: #10b981; /* Emerald-500 - Green */
+            --failure: #ef4444; /* Red-500 - Red */
+            --warning: #f59e0b; /* Amber-500 - Yellow */
+            --in-progress: #3b82f6; /* Blue-500 */
+        }
+
+        /* Base Styles */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+        body { 
+            background: var(--bg); 
+            color: var(--text); 
+            padding: 2rem; 
+            min-height: 100vh;
+        }
+
+        /* --- Global Header & Logo Alignment --- */
+        .global-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+        .title-container {
+            flex-grow: 1;
+        }
+        h1 { 
+            font-size: 2.25rem; 
+            color: var(--cisco-blue);
+            font-weight: 700;
+        }
+        .logo {
+            height: 40px; 
+            width: auto;
+            border-radius: 4px;
+            /* Ensure the logo stays on the right */
+            flex-shrink: 0; 
+            margin-left: 2rem;
+        }
+
+        /* --- Global Badge Style (Used for Overall Status) --- */
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.4rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            line-height: 1; 
+        }
+        .status-success-bg { background: var(--success); color: var(--bg); }
+        .status-failure-bg { background: var(--failure); color: var(--text); }
+        .status-warning-bg { background: var(--warning); color: var(--bg); }
+        .status-inprogress-bg { background: var(--in-progress); color: var(--text); }
+        
+        /* --- Revision Details (Collapsible Main Block) --- */
+        .revision-details {
+            border: 1px solid var(--cisco-dark-blue);
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            overflow: hidden; 
+            transition: box-shadow 0.3s ease-in-out;
+        }
+
+        .revision-details[open] {
+            box-shadow: 0 0 20px rgba(0, 188, 235, 0.3); 
+        }
+
+        .revision-summary {
+            background: #1e293b; 
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            user-select: none;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .revision-summary:hover {
+            background: #28394f;
+        }
+
+        /* Chevron/Arrow for Collapse Animation */
+        .revision-summary::after {
+            content: '▼';
+            font-size: 0.8rem;
+            color: var(--text);
+            margin-left: 1rem;
+            transition: transform 0.3s;
+        }
+        .revision-details[open] .revision-summary::after {
+            content: '▲';
+            transform: rotate(180deg);
+        }
+
+        .revision-info {
+            color: var(--cisco-blue);
+            flex-grow: 1;
+            padding-right: 1rem; 
+        }
+        .revision-info strong { 
+            color: var(--text); 
+            margin-right: 0.5rem;
+        }
+        /* Style for the detailed run info */
+        .revision-info small {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text);
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+        .revision-info a {
+            color: var(--cisco-blue);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .revision-info a:hover {
+            color: #4dc2f0;
+            text-decoration: underline;
+        }
+
+        .revision-status-display {
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.3rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        /* Content Grid - Used for Revision Card Layout */
+        .content-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem; 
+            padding: 1.5rem;
+            background: rgba(30, 41, 59, 0.7); 
+        }
+
+        /* Card Styling for generic cards */
+        .card { 
+            background: var(--card); 
+            padding: 1.5rem; 
+            border-radius: 0.75rem; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3); 
+            margin-bottom: 0rem; /* Resetting internal margin */
+        }
+        /* Style for the static PR header block */
+        #pr-details-container {
+            background: #101c30; /* Slightly darker than card, lighter than background */
+            border: 2px solid var(--cisco-blue); /* Strong border */
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 0 30px rgba(0, 188, 235, 0.3); /* Glowing effect */
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            /* Only apply border bottom to standard cards, not the main PR block */
+            border-bottom: 2px solid var(--cisco-dark-blue);
+            padding-bottom: 0.5rem;
+        }
+        
+        /* Specific styling for the main PR title and status */
+        #pr-details-container .card-header {
+            border-bottom: none; /* Remove border from main PR card header */
+            padding-bottom: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        #pr-details-container .pr-title-block {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap; /* Allow title and badge to wrap on small screens */
+        }
+        
+        #pr-details-container h2 { 
+            font-size: 1.8rem; 
+            color: var(--text); /* Title in white/light */
+            font-weight: 700;
+            margin: 0;
+            margin-right: 1rem;
+        }
+        
+        .pr-subtitle-block {
+            font-size: 1.1rem;
+            color: var(--cisco-blue);
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px dashed var(--cisco-dark-blue);
+            padding-bottom: 0.5rem;
+        }
+
+        .card h3 {
+             font-size: 1.25rem;
+             margin-top: 1rem;
+             color: var(--text);
+        }
+        .card p { margin-bottom: 0.5rem; }
+        .card strong { color: var(--cisco-blue); font-weight: 600; }
+
+        /* Failure Card Styling */
+        .failure-card {
+            background: #451a24; /* Darker red background */
+            border: 2px solid var(--failure);
+            padding: 1.5rem; 
+            border-radius: 0.75rem; 
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); /* Red shadow */
+            /* This should take full grid width */
+            grid-column: 1 / -1; 
+            color: var(--text);
+        }
+        .failure-card h3 {
+            color: var(--failure);
+            font-size: 1.25rem;
+            margin-top: 0;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+        .failure-card h3::before {
+            content: '✖';
+            margin-right: 0.5rem;
+            font-size: 1.5rem;
+        }
+        .failure-card p {
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--failure);
+            padding-left: 0.75rem;
+        }
+        .failure-card strong {
+            color: var(--text);
+            font-weight: 700;
+        }
+        
+        /* Layout for the PR Metadata card (Two-column structure) */
+        .pr-metadata-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two equal columns */
+            gap: 1.5rem;
+        }
+        .pr-metadata-right {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Push button to the bottom */
+        }
+        .pr-metadata-right h3 {
+            margin-top: 0; /* Remove top margin on the right-side header */
+        }
+        /* Style for the container around the button for alignment */
+        .pr-metadata-btn-container {
+            display: flex;
+            justify-content: flex-end; /* Align button to the right */
+            margin-top: 1rem;
+        }
+        
+        /* Collapsible Metrics Styling (Inner details for metric groups) */
+        .metric-group details {
+            margin-top: 0.75rem;
+            border-left: 3px solid var(--cisco-dark-blue);
+            padding-left: 0.75rem;
+            cursor: pointer;
+        }
+        .metric-group summary {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--cisco-blue);
+            padding: 0.25rem 0;
+            transition: color 0.2s;
+        }
+        .metric-group details[open] summary {
+            color: var(--text);
+        }
+        .metric-content p {
+            padding-left: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* --- Files Changed Details Styling --- */
+        .file-details-collapsible {
+            border: 1px solid transparent;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            padding: 0;
+            cursor: pointer;
+        }
+        .file-details-collapsible[open] {
+            border: 1px solid var(--cisco-dark-blue);
+        }
+
+        .file-details-summary {
+            font-weight: 600;
+            list-style: none; /* Hide default triangle */
+            padding: 0.5rem 0;
+            padding-left: 0.5rem;
+            border-radius: 0.5rem;
+            display: block; /* Important for custom marker */
+            position: relative;
+        }
+        /* Custom Chevron for File Summary */
+        .file-details-summary::before {
+            content: '▶';
+            color: var(--cisco-blue);
+            font-size: 0.6rem;
+            margin-right: 0.5rem;
+            transition: transform 0.2s;
+        }
+        .file-details-collapsible[open] .file-details-summary::before {
+            content: '▼';
+        }
+        .file-details-summary:hover {
+            background-color: rgba(0, 80, 115, 0.2); /* Subtle hover effect */
+        }
+
+        .file-count {
+            color: var(--text);
+            background-color: var(--cisco-dark-blue);
+            padding: 0.2rem 0.6rem;
+            border-radius: 0.5rem;
+            margin-left: 0.5rem;
+        }
+        
+        .file-list-content {
+            background: #151e2d; /* Slightly lighter than card */
+            padding: 0.75rem;
+            border-radius: 0 0 0.5rem 0.5rem;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px dashed #28394f;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .file-item a {
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        .file-item a:hover {
+            color: var(--cisco-blue);
+            text-decoration: underline;
+        }
+        .file-stats span {
+            margin-left: 0.5rem;
+            font-weight: 700;
+        }
+
+        /* General Status Text */
+        .status-success { color: var(--success); font-weight: 700; }
+        .status-failure { color: var(--failure); font-weight: 700; }
+        .status-warning { color: var(--warning); font-weight: 700; }
+        .status-in-progress { color: var(--in-progress); font-weight: 700; }
+        .status-merged-true { color: var(--success); font-weight: 700; }
+        .status-merged-false { color: var(--failure); font-weight: 700; }
+        
+        /* Buttons */
+        .btn { 
+            display: inline-block; 
+            background: var(--cisco-blue); 
+            color: var(--bg); 
+            padding: 0.6rem 1.25rem; 
+            border-radius: 0.5rem; 
+            text-decoration: none; 
+            font-weight: 700; 
+            transition: background 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:hover { background: #0077B6; color: var(--text); }
+
+        /* Footer */
+        footer { 
+            text-align: center; 
+            margin-top: 3rem; 
+            font-size: 0.85rem; 
+            opacity: 0.6; 
+            border-top: 1px dashed var(--cisco-dark-blue);
+            padding-top: 1rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .global-header { flex-direction: column; align-items: center; }
+            .logo { margin-left: 0; margin-top: 1rem; }
+            .card-header { flex-direction: column; align-items: flex-start; }
+            #pr-details-container .pr-title-block { flex-direction: column; align-items: flex-start; }
+            #pr-details-container h2 { margin-bottom: 0.5rem; }
+            .revision-summary { padding: 1rem; flex-direction: column; align-items: flex-start; gap: 0.5rem;}
+            .revision-info { padding-right: 0; }
+            .content-grid { 
+                padding: 1rem; 
+                grid-template-columns: 1fr; /* Single column on mobile */
+            }
+            .failure-card { margin-bottom: 1rem; }
+            .pr-metadata-grid { grid-template-columns: 1fr; }
+            .pr-metadata-btn-container { justify-content: flex-start; margin-top: 1rem; }
+            #pr-details-container { padding: 1.5rem; }
+            #pr-details-container h2 { font-size: 1.5rem; }
+            .pr-subtitle-block { font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="global-header">
+        <div class="title-container">
+            <h1>FXOS Pre-Commit Dashboard</h1>
+        </div>
+        <!-- Cisco Logo used from the provided URL, aligned right -->
+        <img src="https://1000logos.net/wp-content/uploads/2016/11/Cisco-logo.png" alt="Cisco Logo" class="logo" />
+    </div>
+
+    <!-- Static PR Details Card - Common to all revisions -->
+    <div id="pr-details-container" class="card">
+        <div class="card-header">
+            <!-- PR Title and overall status will be injected here -->
+        </div>
+        <p>Loading PR details...</p>
+    </div>
+
+    <div class="block" id="dashboard">
+        <!-- Dynamic revision details (collapsible) will be injected here -->
+    </div>
+
+    <footer>
+        FXOS Pre-Commit Dashboard
+    </footer>
+
+    <script>
+        const repoBaseUrl = "https://github.com/cisco-netsec-sandbox/netsec-fxos-pr-dashboard-poc1/pull/";
+        const commitBaseUrl = "https://github.com/cisco-netsec-sandbox/netsec-fxos-pr-dashboard-poc1/commit/";
+
+        // --- Static Mock Data (Consolidated from dashboard_4.json) ---
+        // This array contains the full dataset for PR #4, serving as the static mock source.
+        const staticPr4Data = [
+            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 1, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T08:00:00Z", "commit_hash": "c1f3b7d1e0a2f4c9", "ci_duration_seconds": 1800, "failed_stage": "ARM", "error_message": "Linker error: Undefined reference to 'vtable for NetworkInterface'.", "changed_files_details": [] },
+            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 2, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T11:00:00Z", "commit_hash": "a2c4e6g8i0k2m4n6", "ci_duration_seconds": 2700, "failed_stage": "ARSENAL", "error_message": "Dependency 'lib-security-v2' not found.", "changed_files_details": [] },
+            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 3, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T14:00:00Z", "commit_hash": "b3d5f7h9j1l3n5p7", "ci_duration_seconds": 2200, "failed_stage": "ARM", "error_message": "Compiler error: Undefined reference to 'legacy_function_v2'.", "changed_files_details": [] },
+            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 4, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T17:00:00Z", "commit_hash": "c4e6g8i0k2m4n6p8", "ci_duration_seconds": 1900, "failed_stage": "ARSENAL", "error_message": "Package dependency resolution failed.", "changed_files_details": [] },
+            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 5, "created_at": "2025-11-16T15:00:00Z", "commit_hash": "i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4", "ci_duration_seconds": 2000, "Unit Tests: Build Status": "IN PROGRESS", "smp: Build Status": "PENDING", "ARMV: Build Status": "PENDING", "ARSENAL: Build Status": "PENDING", "ARM: Build Status": "PENDING", "failed_stage": null, "error_message": null, "changed_files_details": [] },
+            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 6, "created_at": "2025-11-16T18:00:00Z", "commit_hash": "j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5", "ci_duration_seconds": 2300, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 30, "smp: Build Status": "IN PROGRESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "PENDING", "ARM: Build Status": "PENDING", "failed_stage": null, "error_message": null, "changed_files_details": [] },
+            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 7, "created_at": "2025-11-16T21:00:00Z", "commit_hash": "k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6", "ci_duration_seconds": 2500, "Unit Tests: Build Status": "SUCCESS", "smp: Build Status": "SUCCESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "IN PROGRESS", "ARM: Build Status": "PENDING", "failed_stage": null, "error_message": null, "changed_files_details": [] },
+            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 8, "created_at": "2025-11-17T00:00:00Z", "commit_hash": "l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7", "ci_duration_seconds": 2800, "Unit Tests: Build Status": "SUCCESS", "smp: Build Status": "SUCCESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "SUCCESS", "ARM: Build Status": "IN PROGRESS", "failed_stage": null, "error_message": null, "changed_files_details": [] },
+            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 9, "created_at": "2025-11-17T03:00:00Z", "commit_hash": "m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8", "ci_duration_seconds": 3100, "Unit Tests: Build Status": "SUCCESS", "smp: Build Status": "SUCCESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "SUCCESS", "ARM: Build Status": "SUCCESS", "failed_stage": null, "error_message": null, "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}] },
+            { "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "changed_files": 1, "title": "Add comment in README for PR Dashboard POC", "revision": 10, "created_at": "2025-11-17T06:00:00Z", "commit_hash": "n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9", "ci_duration_seconds": 3600, "Unit Tests: Build Status": "SUCCESS", "smp: Build Status": "SUCCESS", "ARMV: Build Status": "SUCCESS", "ARSENAL: Build Status": "SUCCESS", "ARM: Build Status": "FAILURE", "failed_stage": "ARM", "error_message": "Compiler error: Undefined reference to 'legacy_function_v2'. Linker stage failed.", "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}] },
+            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": "33%", "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 11, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T09:00:00Z", "commit_hash": "o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0", "ci_duration_seconds": 4200, "failed_stage": "ARSENAL", "error_message": "Package dependency resolution failed due to incompatible library versions. Check ARSENAL log for details.", "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}] },
+            { 
+                "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": "33%", "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "smp: Static Analysis Issues": 0, "changed_files": 1, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 12, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", 
+                "created_at": "2025-11-17T12:00:00Z", "commit_hash": "p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1", "ci_duration_seconds": 4500, "failed_stage": "ARM", "error_message": "Final attempt failed: ARM build timeout after 60 minutes.", "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}],
+                "latest_build_label": "fxplatform-uxbridge__FXOS_2_19_MAIN-82.19.0.25",
+                "latest_build_changelist": "4664218",
+                "latest_build_version": "82.19.0.25",
+                "updated_at": "2025-11-18T08:46:52Z", "pr_state": "open", "base_branch": "uxbridge/FXOS_2_19_MAIN_ALPHA", "head_branch": "main", "ci_start_time": "2025-11-18T08:42:22Z", "jenkins_build_number": 131, "jenkins_build_url": "https://jenkins.service.ntd.ciscolabs.com/job/FXOS-P4GIT/job/FXOS-PR-Dashboard/job/PR-4/131/"
+            }
+        ];
+        // --- Dashboard Utility Functions ---
+
+        function getStatusClass(status) {
+            status = String(status).toUpperCase();
+            if (status === "SUCCESS" || status === "TRUE" || status === "PASSING BUILD") return "status-success";
+            if (status === "FAILURE" || status === "FALSE" || status === "FAILING BUILD") return "status-failure";
+            if (status === "IN PROGRESS" || status === "PENDING" || status === "UNKNOWN" || status === "OPEN") return "status-in-progress";
+            return "status-warning"; 
+        }
+
+        function getStatusBgClass(status) {
+            status = String(status).toUpperCase();
+            if (status.includes("SUCCESS") || status.includes("PASSING")) return "status-success-bg";
+            if (status.includes("FAILURE") || status.includes("FAILING")) return "status-failure-bg";
+            if (status.includes("IN PROGRESS") || status.includes("PENDING")) return "status-inprogress-bg";
+            return "status-warning-bg";
+        }
+
+        function getOverallStatus(data) {
+            const buildStatusKeys = Object.keys(data).filter(key => key.includes("Build Status"));
+            let hasFailure = false;
+            let hasInProgressOrPending = false;
+            let hasSuccess = false;
+
+            if (buildStatusKeys.length === 0) return "UNKNOWN";
+
+            for (const key of buildStatusKeys) {
+                const status = String(data[key]).toUpperCase();
+                if (status === "FAILURE") hasFailure = true;
+                else if (status === "IN PROGRESS" || status === "PENDING" || status === "UNKNOWN") hasInProgressOrPending = true;
+                else if (status === "SUCCESS") hasSuccess = true;
+            }
+
+            if (hasFailure) return "FAILING BUILD";
+            if (hasInProgressOrPending) return "IN PROGRESS";
+            if (hasSuccess) return "PASSING BUILD";
+            return "UNKNOWN";
+        }
+
+        function formatCiRunTime(timestamp) {
+            if (!timestamp) return 'N/A';
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZoneName: 'short' });
+            } catch (e) { return 'Invalid Date'; }
+        }
+
+        function calculateDuration(seconds) {
+            if (seconds === undefined || seconds === null) return 'N/A';
+            const minutes = Math.round(seconds / 60);
+            return `${minutes} min`;
+        }
+        
+        function renderFailureCard(data) {
+            if (!data.failed_stage || !data.error_message) return '';
+            return `
+                <div class="failure-card">
+                    <h3>Failure Details</h3>
+                    <p><strong>Failed Stage:</strong> <span>${data.failed_stage}</span></p>
+                    <p><strong>Error Message:</strong> <span>${data.error_message}</span></p>
+                </div>
+            `;
+        }
+
+        // --- Helper to render the new General Metrics card ---
+        function renderGeneralMetricsCard(data) {
+            const hasGeneralMetrics = ['updated_at', 'pr_state', 'base_branch'].some(key => data.hasOwnProperty(key));
+            if (!hasGeneralMetrics) return '';
+
+            const jenkinsUrl = data.jenkins_build_url || '#';
+            const buildNum = data.jenkins_build_number || 'N/A';
+            const prState = data.pr_state ? data.pr_state.toUpperCase() : 'N/A';
+            
+            return `
+                <div class="card">
+                    <div class="card-header"><h3>General Metrics</h3></div>
+                    <div class="pr-metadata-grid">
+                        <div class="pr-metadata-left">
+                             <p><strong>PR State:</strong> <span class="status-badge ${getStatusBgClass(prState === 'OPEN' ? 'IN PROGRESS' : prState)}">${prState}</span></p>
+                             <p><strong>Base Branch:</strong> <span style="font-family:monospace; color:var(--cisco-blue);">${data.base_branch || 'N/A'}</span></p>
+                             <p><strong>Head Branch:</strong> <span style="font-family:monospace; color:var(--cisco-blue);">${data.head_branch || 'N/A'}</span></p>
+                        </div>
+                        <div class="pr-metadata-right">
+                             <p><strong>CI Start:</strong> ${formatCiRunTime(data.ci_start_time)}</p>
+                             <p><strong>Last Update:</strong> ${formatCiRunTime(data.updated_at)}</p>
+                             <p><strong>Jenkins Build:</strong> <a href="${jenkinsUrl}" target="_blank" class="btn" style="padding:0.2rem 0.5rem; font-size:0.85rem; margin-top:0;">#${buildNum}</a></p>
+                        </div>
+                        
+                        <div style="grid-column: 1 / -1; border-top:1px dashed var(--cisco-dark-blue); margin-top:1rem; padding-top:1rem;">
+                             <h4>Build Artifact Info</h4>
+                             <p><strong>Build Version:</strong> <span style="color:var(--cisco-blue);">${data.latest_build_version || 'N/A'}</span></p>
+                             <p><strong>Changelist:</strong> ${data.latest_build_changelist || 'N/A'}</p>
+                             <p><strong>Build Label:</strong> <span style="font-size:0.85em; font-family:monospace; word-break:break-all;">${data.latest_build_label || 'N/A'}</span></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMetrics(data) {
+            const metricsHtml = [];
+            const ignoredKeys = new Set([
+                'author', 'pr_id', 'title', 'revision', 'changed_files', 'additions', 'deletions', 'merged',
+                'created_at', 'commit_hash', 'ci_duration_seconds', 'failed_stage', 'error_message',
+                'changed_files_details',
+                'updated_at', 'pr_state', 'base_branch', 'head_branch', 'ci_start_time', 'jenkins_build_number', 'jenkins_build_url',
+                'latest_build_version', 'latest_build_changelist', 'latest_build_label'
+            ]);
+
+            const metricGroups = {};
+            Object.keys(data).forEach(key => {
+                if (!ignoredKeys.has(key)) {
+                    const parts = key.split(':');
+                    const stage = parts.length > 1 ? parts[0].trim() : 'General Metrics';
+                    const metricName = parts.length > 1 ? parts.slice(1).join(':').trim() : key;
+
+                    if (!metricGroups[stage]) metricGroups[stage] = [];
+                    metricGroups[stage].push({ name: metricName, value: data[key] });
+                }
+            });
+            
+            const sortedGroupNames = Object.keys(metricGroups).sort((a, b) => {
+                 if (a === "Unit Tests") return -1;
+                 if (b === "Unit Tests") return 1;
+                 return a.localeCompare(b);
+            });
+
+            for (const stage of sortedGroupNames) {
+                const metrics = metricGroups[stage];
+                let stageStatus = data[`${stage}: Build Status`]; 
+                
+                if (!stageStatus) {
+                     const hasFailure = metrics.some(m => (m.name.includes('Issues') || m.name.includes('Failed')) && parseFloat(m.value) > 0);
+                     stageStatus = hasFailure ? "FAILURE" : "SUCCESS";
+                }
+                
+                const summaryTitle = data.hasOwnProperty(`${stage}: Build Status`)
+                    ? `<span class="${getStatusClass(stageStatus)}">${stage} - ${String(stageStatus).toUpperCase()}</span>`
+                    : `<span class="${getStatusClass(stageStatus)}">${stage}</span>`;
+                    
+                const metricContent = metrics.map(metric => {
+                    let value = metric.value ?? 'N/A';
+                    let metricClass = '';
+                    
+                    if (metric.name === 'Build Status') return null;
+
+                    if (metric.name === 'Coverage Percentage' && typeof value === 'number' && !String(value).includes('%')) {
+                         value = `${value}%`;
+                         if (parseFloat(value) < 50) metricClass = 'status-failure';
+                    } else if (metric.name === 'Coverage Percentage' && typeof value === 'string' && value.includes('%')) {
+                        if (parseFloat(value) < 50) metricClass = 'status-failure';
+                    } else if ((metric.name.includes('Issues') || metric.name.includes('Failed')) && parseFloat(value) > 0) {
+                         metricClass = 'status-failure';
+                    } else if (metric.name.includes('Passed') && parseFloat(value) > 0) {
+                         metricClass = 'status-success';
+                    } else if ((metric.name.includes('Issues') || metric.name.includes('Failed')) && parseFloat(value) === 0) {
+                         metricClass = 'status-success';
+                    }
+
+                    return `<p><strong>${metric.name}:</strong> <span class="${metricClass}">${value}</span></p>`;
+                }).filter(Boolean).join('');
+
+                const isOpen = String(stageStatus).toUpperCase() === "FAILURE" ? 'open' : '';
+
+                metricsHtml.push(`
+                    <details ${isOpen}>
+                        <summary>${summaryTitle}</summary>
+                        <div class="metric-content">
+                            ${metricContent}
+                        </div>
+                    </details>
+                `);
+            }
+
+            return `
+                <div class="card-header"><h2>CI/CD & Code Quality</h2></div>
+                <div class="metric-group">
+                    ${metricsHtml.length > 0 ? metricsHtml.join('') : '<p>No metric data available for this revision.</p>'}
+                </div>
+            `;
+        }
+
+        function renderFilesChanged(data) {
+            const fileDetails = data.changed_files_details ?? [];
+            const totalFiles = data.changed_files ?? 0;
+            const totalAdditions = data.additions ?? 0;
+            const totalDeletions = data.deletions ?? 0;
+
+            let fileListHtml = '';
+            if (fileDetails.length > 0) {
+                fileListHtml = fileDetails.map(file => {
+                    const diffHash = file.diff_hash ?? ''; 
+                    const fileDiffUrl = `${repoBaseUrl}${data.pr_id}/files#diff-${diffHash}`;
+                    const additionsDisplay = (file.additions ?? 0) > 0 ? `<span class="${getStatusClass(true)}">+${file.additions}</span>` : '';
+                    const deletionsDisplay = (file.deletions ?? 0) > 0 ? `<span class="${getStatusClass(false)}">-${file.deletions}</span>` : '';
+                    
+                    return `
+                        <div class="file-item">
+                            <a href="${fileDiffUrl}" target="_blank" title="View Diff for ${file.file_name ?? 'N/A'}">
+                                ${file.file_name ?? 'N/A'} 
+                            </a>
+                            <span class="file-stats">${additionsDisplay} ${deletionsDisplay}</span>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                fileListHtml = `<p style="padding: 0.5rem; opacity: 0.8;">${totalFiles > 0 ? 'No detailed list available.' : 'No files changed.'}</p>`;
+            }
+
+            return `
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Files Changed</h3>
+                        <div>
+                            <span class="status-success" style="font-weight:700;">+${totalAdditions}</span>
+                            <span class="status-failure" style="margin-left: 0.5rem; font-weight:700;">-${totalDeletions}</span>
+                        </div>
+                    </div>
+                    
+                    <details class="file-details-collapsible" ${fileDetails.length > 0 ? 'open' : ''}>
+                        <summary class="file-details-summary">
+                            Total Files: <span class="file-count">${totalFiles}</span>
+                        </summary>
+                        <div class="file-list-content">
+                            ${fileListHtml}
+                        </div>
+                    </details>
+                </div>
+            `;
+        }
+
+        function renderMetadataCard(data) {
+            const shortHash = (data.commit_hash ?? 'N/A').substring(0, 8);
+            const prLink = data.commit_hash ? `${repoBaseUrl}${data.pr_id}/commits/${data.commit_hash}` : '#';
+            const durationDisplay = calculateDuration(data.ci_duration_seconds);
+            const mergedStatusText = data.merged === undefined ? "N/A" : (data.merged ? "TRUE" : "FALSE");
+            
+            return `
+                <div class="card">
+                    <div class="card-header"><h3>Commit & CI Details</h3></div>
+                    <div class="pr-metadata-grid">
+                        <div class="pr-metadata-left">
+                            <p><strong>Commit Hash:</strong> <a href="${prLink}" target="_blank">${shortHash}</a></p>
+                            <p><strong>Run Initiated:</strong> ${formatCiRunTime(data.created_at)}</p>
+                            <p><strong>CI Duration:</strong> ${durationDisplay}</p>
+                        </div>
+                        <div class="pr-metadata-right">
+                            <p><strong>Overall Build:</strong> <span class="${getStatusClass(getOverallStatus(data))}">${getOverallStatus(data)}</span></p>
+                            <p><strong>Merged:</strong> <span class="status-merged-${String(data.merged).toLowerCase()}">${mergedStatusText}</span></p>
+                            <div class="pr-metadata-btn-container">
+                                <a href="${prLink}" target="_blank" class="btn">View CI Log & Commit</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createRevisionCard(data, isOpen = '') {
+            const overallStatus = getOverallStatus(data);
+            const summaryStatusBadge = `<span class="revision-status-display ${getStatusBgClass(overallStatus)}">${overallStatus}</span>`;
+            const runTime = formatCiRunTime(data.created_at);
+            const shortHash = (data.commit_hash ?? 'N/A').substring(0, 7);
+            const commitLink = data.commit_hash ? `${commitBaseUrl}${data.commit_hash}` : '#';
+            
+            const failureCardHtml = renderFailureCard(data);
+            const generalMetricsCardHtml = renderGeneralMetricsCard(data);
+            
+            // NEW: Render the new Summary card (combining Commit/CI Details and Files Changed)
+            const ciSummaryCardHtml = `
+                <div class="card ci-summary-card">
+                    <div class="card-header">
+                        <h3>CI Summary</h3>
+                    </div>
+                    <div class="pr-metadata-grid">
+                        <div class="pr-metadata-left">
+                            <p><strong>Commit Hash:</strong> <a href="${commitLink}" target="_blank">${shortHash}</a></p>
+                            <p><strong>Run Initiated:</strong> ${runTime}</p>
+                            <p><strong>CI Duration:</strong> ${calculateDuration(data.ci_duration_seconds)}</p>
+                            <p style="margin-top:1rem;"><strong>Merged:</strong> <span class="status-merged-${String(data.merged).toLowerCase()}">${data.merged ? "TRUE" : "FALSE"}</span></p>
+                        </div>
+                        <div class="pr-metadata-right">
+                            <div>
+                                <h3>Impact & Status</h3>
+                                <p><strong>Files Changed:</strong> <span>${data.changed_files ?? 0}</span></p>
+                                <p><strong>Lines Added:</strong> <span class="${getStatusClass((data.additions ?? 0) > 0 ? true : false)}">+${data.additions ?? 0}</span></p>
+                                <p><strong>Lines Deleted:</strong> <span class="${getStatusClass((data.deletions ?? 0) === 0 ? true : false)}">-${data.deletions ?? 0}</span></p>
+                            </div>
+                             <div class="pr-metadata-btn-container">
+                                <a href="${commitLink}" target="_blank" class="btn">View Details & Log</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return `
+                <details class="revision-details" ${isOpen}>
+                    <summary class="revision-summary">
+                        <div class="revision-info">
+                            <strong>Rev ${data.revision ?? 'N/A'}:</strong> 
+                            <a href="${commitLink}" target="_blank" title="View Commit ${data.commit_hash ?? ''}">Commit ${shortHash}</a> 
+                            &middot; ${data.title ?? 'N/A'}
+                            <small>Run started: ${runTime} | Duration: ${calculateDuration(data.ci_duration_seconds)}</small>
+                        </div>
+                        ${summaryStatusBadge}
+                    </summary>
+                    
+                    <div class="content-grid">
+                        ${failureCardHtml}
+                        ${ciSummaryCardHtml} 
+                        ${generalMetricsCardHtml}
+                        <div class="card">
+                            ${renderMetrics(data)}
+                        </div>
+                        ${renderFilesChanged(data)}
+                    </div>
+                </details>
+            `;
+        }
+
+        async function loadMetrics() {
+            const dashboardContainer = document.getElementById("dashboard");
+            const prDetailsContainer = document.getElementById("pr-details-container");
+            const loadingParagraph = prDetailsContainer.querySelector('p');
+            const prId = new URLSearchParams(window.location.search).get("pr") || "4"; 
+
+            // Use the static data directly, avoiding the failing fetch call
+            let dataList = staticPr4Data;
+            
+            if (!dataList || dataList.length === 0) {
+                 loadingParagraph.innerText = `Error: No data found for PR #${prId}.`;
+                 return;
+            }
+
+            if (loadingParagraph) loadingParagraph.remove();
+
+            dataList.sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0));
+            const latestRevisionData = dataList[0];
+
+            const overallStatus = getOverallStatus(latestRevisionData);
+            const overallStatusBadge = `<span class="status-badge ${getStatusBgClass(overallStatus)}">${overallStatus}</span>`;
+            const prIdDisplay = `#${latestRevisionData.pr_id ?? prId}`;
+            const authorDisplay = `@${latestRevisionData.author ?? 'N/A'}`;
+            const headerElement = prDetailsContainer.querySelector('.card-header'); 
+            
+            const createdDate = new Date(latestRevisionData.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const prLink = `${repoBaseUrl}${latestRevisionData.pr_id ?? prId}`;
+
+            headerElement.innerHTML = `
+                <div class="pr-title-block">
+                    <h2>${latestRevisionData.title ?? 'PR Dashboard'}</h2>
+                    ${overallStatusBadge}
+                </div>
+            `;
+            
+            const subtitleHtml = `
+                <div class="pr-subtitle-block">
+                    PR ${prIdDisplay} opened by ${authorDisplay} on ${createdDate}
+                </div>
+            `;
+            headerElement.insertAdjacentHTML('afterend', subtitleHtml);
+
+            let fileDetailsHTML = '';
+            const filesChangedCount = latestRevisionData.changed_files ?? 0;
+            if (filesChangedCount > 0) {
+                 const fileDetails = latestRevisionData.changed_files_details || [];
+                 const diffHashBaseUrl = `${repoBaseUrl}${prId}/files#diff-`;
+                 
+                 const fileListItems = fileDetails.slice(0, 3).map(file => {
+                    const diffHash = file.diff_hash || crypto.randomUUID().replace(/-/g, '').substring(0, 32); 
+                    const fileDiffUrl = `${diffHashBaseUrl}${diffHash}`;
+                    const additionsDisplay = (file.additions ?? 0) > 0 ? `<span class="${getStatusClass(true)}">+${file.additions}</span>` : '';
+                    const deletionsDisplay = (file.deletions ?? 0) > 0 ? `<span class="${getStatusClass(false)}">-${file.deletions}</span>` : '';
+                    
+                    return `<div class="file-item" style="border-bottom: none; padding: 0.2rem 0; font-family: monospace;">
+                        <a href="${fileDiffUrl}" target="_blank" style="font-size: 0.85rem;">${file.file_name ?? 'N/A'}</a>
+                        <span class="file-stats" style="font-size: 0.8rem;">${additionsDisplay} ${deletionsDisplay}</span>
+                    </div>`;
+                }).join('');
+
+                const moreFilesText = filesChangedCount > 3 ? `<p style="opacity: 0.7; font-size: 0.8rem;">... and ${filesChangedCount - 3} more files</p>` : '';
+
+                fileDetailsHTML = `
+                    <details class="file-details-collapsible">
+                        <summary class="file-details-summary" style="padding-left: 0.1rem; border-radius: 0;">
+                            <strong>Files Changed:</strong> 
+                            <span class="file-count" style="margin-left: 0.2rem;">${filesChangedCount}</span>
+                        </summary>
+                        <div class="file-list-content" style="background: none; padding: 0.5rem 0 0;">
+                            ${fileListItems}
+                            ${moreFilesText}
+                        </div>
+                    </details>
+                `;
+            } else {
+                fileDetailsHTML = `<p><strong>Files Changed:</strong> <span>${filesChangedCount}</span></p>`;
+            }
+
+            const mergedStatusText = latestRevisionData.merged === undefined ? "N/A" : (latestRevisionData.merged ? "TRUE" : "FALSE");
+            const mergedClass = getStatusClass(latestRevisionData.merged);
+            
+            const metadataHtml = `
+                <div class="pr-metadata-grid">
+                    <div class="pr-metadata-left">
+                        <h3>Revision Summary</h3>
+                        <p><strong>Latest Revision:</strong> <span>${latestRevisionData.revision ?? 'N/A'}</span></p>
+                        <p><strong>Latest Commit:</strong> <span><a href="${commitBaseUrl}${latestRevisionData.commit_hash ?? ''}" target="_blank">${(latestRevisionData.commit_hash ?? 'N/A').substring(0, 7)}</a></span></p>
+                        ${fileDetailsHTML}
+                    </div>
+                    
+                    <div class="pr-metadata-right">
+                        <div>
+                            <h3>Impact & Merge Status</h3>
+                            <p><strong>Lines Added:</strong> <span class="${getStatusClass((latestRevisionData.additions ?? 0) > 0 ? true : false)}">+${latestRevisionData.additions ?? 0}</span></p>
+                            <p><strong>Lines Deleted:</strong> <span class="${getStatusClass((latestRevisionData.deletions ?? 0) === 0 ? true : false)}">-${latestRevisionData.deletions ?? 0}</span></p>
+                            <p><strong>Merged Status:</strong> <span class="${mergedClass}">${mergedStatusText}</span></p>
+                        </div>
+
+                        <div class="pr-metadata-btn-container">
+                            <a href="${prLink}" class="btn" target="_blank">Open PR ${prIdDisplay} on GitHub</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            prDetailsContainer.insertAdjacentHTML('beforeend', metadataHtml);
+
+            const revisionCardsHtml = dataList.map((data, index) => {
+                const isOpen = index === 0 ? 'open' : '';
+                return createRevisionCard(data, isOpen);
+            }).join('');
+
+            dashboardContainer.innerHTML = revisionCardsHtml;
+        }
+
+        loadMetrics();
+    </script>
+</body>
+</html>
