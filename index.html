@@ -465,20 +465,6 @@
         // --- Azure SAS URL Data Source ---
         const AZURE_SAS_URL = "https://bibinlearnsa.blob.core.windows.net/mycontainer/sample1.json?sp=racwdyti&st=2025-11-24T06:41:15Z&se=2025-11-28T14:56:15Z&spr=https&sv=2024-11-04&sr=b&sig=Et%2BuF8QBaR8AEIDR%2BdxrwtSVnhqSdvLPxLbpXzYsTzg%3D";
 
-        // --- Fallback Data (In case Azure fetch fails) ---
-        const staticPr4Data = [
-            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 1, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T08:00:00Z", "commit_hash": "c1f3b7d1e0a2f4c9", "ci_duration_seconds": 1800, "failed_stage": "ARM", "error_message": "Linker error: Undefined reference to 'vtable for NetworkInterface'.", "changed_files_details": [] },
-            { "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": 33, "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "changed_files": 1, "smp: Static Analysis Issues": 0, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 2, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARMV: Static Analysis Files Count": 0, "ARM: Build Status": "FAILURE", "created_at": "2025-11-17T11:00:00Z", "commit_hash": "a2c4e6g8i0k2m4n6", "ci_duration_seconds": 2700, "failed_stage": "ARSENAL", "error_message": "Dependency 'lib-security-v2' not found.", "changed_files_details": [] },
-            { 
-                "ARMV: Static Analysis Issues": 0, "additions": 2, "deletions": 0, "author": "dhapal_cisco", "pr_id": "4", "merged": false, "Unit Tests: Build Status": "SUCCESS", "Unit Tests: Coverage Percentage": "33%", "Unit Tests: Unit Tests Skipped": 0, "smp: Build Status": "SUCCESS", "smp: Static Analysis Issues": 0, "changed_files": 1, "ARSENAL: Build Status": "FAILURE", "smp: Static Analysis Files Count": 0, "title": "Add comment in README for PR Dashboard POC", "ARMV: Build Status": "SUCCESS", "revision": 12, "Unit Tests: Unit Tests Failed": 0, "Unit Tests: Unit Tests Passed": 15, "ARMV: Static Analysis Files Count": 0, "ARM: Build Status": "FAILURE", 
-                "created_at": "2025-11-17T12:00:00Z", "commit_hash": "p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1", "ci_duration_seconds": 4500, "failed_stage": "ARM", "error_message": "Final attempt failed: ARM build timeout after 60 minutes.", "changed_files_details": [{"file_name": "README.md", "additions": 2, "deletions": 0}],
-                "latest_build_label": "fxplatform-uxbridge__FXOS_2_19_MAIN-82.19.0.25",
-                "latest_build_changelist": "4664218",
-                "latest_build_version": "82.19.0.25",
-                "updated_at": "2025-11-18T08:46:52Z", "pr_state": "open", "base_branch": "uxbridge/FXOS_2_19_MAIN_ALPHA", "head_branch": "main", "ci_start_time": "2025-11-18T08:42:22Z", "jenkins_build_number": 131, "jenkins_build_url": "https://jenkins.service.ntd.ciscolabs.com/job/FXOS-P4GIT/job/FXOS-PR-Dashboard/job/PR-4/131/"
-            }
-        ];
-
         // --- Utility Functions ---
 
         function getStatusClass(status) {
@@ -710,17 +696,16 @@
             `;
         }
 
-        function createRevisionCard(data, isOpen = '') {
-            const overallStatus = getOverallStatus(data);
+        function createRevisionCard(revisionData, rootData, isOpen = '') {
+            const overallStatus = getOverallStatus(revisionData);
             const summaryStatusBadge = `<span class="revision-status-display ${getStatusBgClass(overallStatus)}">${overallStatus}</span>`;
-            const runTime = formatCiRunTime(data.created_at);
-            const shortHash = (data.commit_hash ?? 'N/A').substring(0, 7);
-            const commitLink = data.commit_hash ? `${commitBaseUrl}${data.commit_hash}` : '#';
+            const runTime = formatCiRunTime(revisionData.created_at);
+            const shortHash = (revisionData.commit_hash ?? 'N/A').substring(0, 7);
+            const commitLink = revisionData.commit_hash ? `${commitBaseUrl}${revisionData.commit_hash}` : '#';
             
-            const failureCardHtml = renderFailureCard(data);
-            const generalMetricsCardHtml = renderGeneralMetricsCard(data);
+            const failureCardHtml = renderFailureCard(revisionData);
+            const generalMetricsCardHtml = renderGeneralMetricsCard(rootData);
             
-            // CI Summary card (combining Commit/CI Details and Files Changed)
             const ciSummaryCardHtml = `
                 <div class="card ci-summary-card">
                     <div class="card-header">
@@ -730,15 +715,15 @@
                         <div class="pr-metadata-left">
                             <p><strong>Commit Hash:</strong> <a href="${commitLink}" target="_blank">${shortHash}</a></p>
                             <p><strong>Run Initiated:</strong> ${runTime}</p>
-                            <p><strong>CI Duration:</strong> ${calculateDuration(data.ci_duration_seconds)}</p>
-                            <p style="margin-top:1rem;"><strong>Merged:</strong> <span class="status-merged-${String(data.merged).toLowerCase()}">${data.merged ? "TRUE" : "FALSE"}</span></p>
+                            <p><strong>CI Duration:</strong> ${calculateDuration(revisionData.ci_duration_seconds)}</p>
+                            <p style="margin-top:1rem;"><strong>Merged:</strong> <span class="status-merged-${String(revisionData.merged).toLowerCase()}">${revisionData.merged ? "TRUE" : "FALSE"}</span></p>
                         </div>
                         <div class="pr-metadata-right">
                             <div>
                                 <h3>Impact & Status</h3>
-                                <p><strong>Files Changed:</strong> <span>${data.changed_files ?? 0}</span></p>
-                                <p><strong>Lines Added:</strong> <span class="${getStatusClass((data.additions ?? 0) > 0 ? true : false)}">+${data.additions ?? 0}</span></p>
-                                <p><strong>Lines Deleted:</strong> <span class="${getStatusClass((data.deletions ?? 0) === 0 ? true : false)}">-${data.deletions ?? 0}</span></p>
+                                <p><strong>Files Changed:</strong> <span>${revisionData.changed_files ?? 0}</span></p>
+                                <p><strong>Lines Added:</strong> <span class="${getStatusClass((revisionData.additions ?? 0) > 0 ? true : false)}">+${revisionData.additions ?? 0}</span></p>
+                                <p><strong>Lines Deleted:</strong> <span class="${getStatusClass((revisionData.deletions ?? 0) === 0 ? true : false)}">-${revisionData.deletions ?? 0}</span></p>
                             </div>
                              <div class="pr-metadata-btn-container">
                                 <a href="${commitLink}" target="_blank" class="btn">View Details & Log</a>
@@ -752,10 +737,10 @@
                 <details class="revision-details" ${isOpen}>
                     <summary class="revision-summary">
                         <div class="revision-info">
-                            <strong>Rev ${data.revision ?? 'N/A'}:</strong> 
-                            <a href="${commitLink}" target="_blank" title="View Commit ${data.commit_hash ?? ''}">Commit ${shortHash}</a> 
-                            &middot; ${data.title ?? 'N/A'}
-                            <small>Run started: ${runTime} | Duration: ${calculateDuration(data.ci_duration_seconds)}</small>
+                            <strong>Rev ${revisionData.revision ?? 'N/A'}:</strong> 
+                            <a href="${commitLink}" target="_blank" title="View Commit ${revisionData.commit_hash ?? ''}">Commit ${shortHash}</a> 
+                            &middot; ${rootData.title ?? 'N/A'}
+                            <small>Run started: ${runTime} | Duration: ${calculateDuration(revisionData.ci_duration_seconds)}</small>
                         </div>
                         ${summaryStatusBadge}
                     </summary>
@@ -765,9 +750,9 @@
                         ${ciSummaryCardHtml} 
                         ${generalMetricsCardHtml}
                         <div class="card">
-                            ${renderMetrics(data)}
+                            ${renderMetrics(revisionData)}
                         </div>
-                        ${renderFilesChanged(data)}
+                        ${renderFilesChanged(revisionData)}
                     </div>
                 </details>
             `;
@@ -776,7 +761,6 @@
         async function fetchWithRetry(url, maxRetries = 3) {
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    // Use & as SAS already contains ?
                     const cacheBuster = `&v=${new Date().getTime()}`; 
                     const response = await fetch(url + cacheBuster, { credentials: 'omit', cache: 'no-store' });
                     
@@ -784,57 +768,79 @@
                         throw new Error(`HTTP error! Status: ${response.status} (${response.statusText})`);
                     }
                     const data = await response.json();
-                    if (Array.isArray(data)) return data;
                     
-                    throw new Error("Fetched data is not an array.");
+                    if (Array.isArray(data)) {
+                        return data;
+                    } else if (typeof data === 'object' && data !== null && Array.isArray(data.revisions)) {
+                        return data; 
+                    }
+                    
+                    throw new Error("Fetched data is not in expected array or object structure.");
                 } catch (error) {
                     console.error(`Attempt ${i + 1} failed: ${error.message}`);
-                    if (i === maxRetries - 1) return null; // All retries failed
+                    if (i === maxRetries - 1) {
+                        return null; 
+                    }
                     const delay = Math.pow(2, i) * 1000;
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
             }
         }
-
+        
         async function loadMetrics() {
             const dashboardContainer = document.getElementById("dashboard");
             const prDetailsContainer = document.getElementById("pr-details-container");
             const loadingParagraph = prDetailsContainer.querySelector('p');
             const prId = new URLSearchParams(window.location.search).get("pr") || "4"; 
             
-            // Try to fetch from Azure
-            let dataList = await fetchWithRetry(AZURE_SAS_URL);
+            let rawData = await fetchWithRetry(AZURE_SAS_URL);
             
-            // If fetch fails, use static fallback data
-            if (!dataList) {
-                 console.warn("Fetch failed. Falling back to static mock data.");
-                 dataList = staticPr4Data;
-            }
-
-            if (!dataList || dataList.length === 0) {
-                 loadingParagraph.innerText = `Error: No data found for PR #${prId}.`;
-                 return;
+            if (!rawData) {
+                 loadingParagraph.innerHTML = `<strong>Error:</strong> Failed to load data from Azure Blob Storage.<br>Please ensure the SAS URL is active and CORS is configured on the storage account.`;
+                 loadingParagraph.style.color = "var(--failure)";
+                 return; 
             }
 
             if (loadingParagraph) loadingParagraph.remove();
 
-            // Sort data by revision descending (latest first)
-            dataList.sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0));
-            const latestRevisionData = dataList[0];
+            let revisionsList = [];
+            let rootData = {}; 
 
-            // Render Header
+            if (Array.isArray(rawData)) {
+                revisionsList = rawData;
+                let filtered = revisionsList.filter(d => String(d.pr_id) === prId);
+                if (filtered.length > 0) revisionsList = filtered;
+                
+                revisionsList.sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0));
+                if (revisionsList.length > 0) {
+                    rootData = revisionsList[0]; 
+                }
+            } else {
+                rootData = rawData;
+                revisionsList = rawData.revisions || [];
+            }
+
+            if (revisionsList.length === 0) {
+                loadingParagraph.innerHTML = `<strong>Error:</strong> Data loaded, but no revisions found.`;
+                loadingParagraph.style.color = "var(--warning)";
+                return;
+            }
+            
+            revisionsList.sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0));
+            const latestRevisionData = revisionsList[0];
+
             const overallStatus = getOverallStatus(latestRevisionData);
             const overallStatusBadge = `<span class="status-badge ${getStatusBgClass(overallStatus)}">${overallStatus}</span>`;
-            const prIdDisplay = `#${latestRevisionData.pr_id ?? prId}`;
-            const authorDisplay = `@${latestRevisionData.author ?? 'N/A'}`;
+            const prIdDisplay = `#${rootData.pr_id ?? prId}`;
+            const authorDisplay = `@${rootData.author ?? 'N/A'}`;
             const headerElement = prDetailsContainer.querySelector('.card-header'); 
             
             const createdDate = new Date(latestRevisionData.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-            const prLink = `${repoBaseUrl}${latestRevisionData.pr_id ?? prId}`;
+            const prLink = `${repoBaseUrl}${rootData.pr_id ?? prId}`;
 
             headerElement.innerHTML = `
                 <div class="pr-title-block">
-                    <h2>${latestRevisionData.title ?? 'PR Dashboard'}</h2>
+                    <h2>${rootData.title ?? 'PR Dashboard'}</h2>
                     ${overallStatusBadge}
                 </div>
             `;
@@ -846,12 +852,11 @@
             `;
             headerElement.insertAdjacentHTML('afterend', subtitleHtml);
 
-            // Render Metadata grid
             let fileDetailsHTML = '';
             const filesChangedCount = latestRevisionData.changed_files ?? 0;
             if (filesChangedCount > 0) {
                  const fileDetails = latestRevisionData.changed_files_details || [];
-                 const diffHashBaseUrl = `${repoBaseUrl}${prId}/files#diff-`;
+                 const diffHashBaseUrl = `${repoBaseUrl}${rootData.pr_id}/files#diff-`;
                  
                  const fileListItems = fileDetails.slice(0, 3).map(file => {
                     const diffHash = file.diff_hash || crypto.randomUUID().replace(/-/g, '').substring(0, 32); 
@@ -912,16 +917,15 @@
             
             prDetailsContainer.insertAdjacentHTML('beforeend', metadataHtml);
 
-            // 3. Render Revision Timeline
-            const revisionCardsHtml = dataList.map((data, index) => {
+            const revisionCardsHtml = revisionsList.map((revisionData, index) => {
                 const isOpen = index === 0 ? 'open' : '';
-                return createRevisionCard(data, isOpen);
+                return createRevisionCard(revisionData, rootData, isOpen);
             }).join('');
 
             dashboardContainer.innerHTML = revisionCardsHtml;
         }
 
-        window.onload = loadMetrics;
+        loadMetrics();
     </script>
 </body>
 </html>
